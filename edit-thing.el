@@ -22,7 +22,7 @@
 
 (defvar edit-thing--buffer-prefix "")
 (make-variable-buffer-local 'edit-thing--buffer-prefix)
-(put 'edit-thing--buffer-prefix 'permanent-local t)       
+(put 'edit-thing--buffer-prefix 'permanent-local t)
 
 (defvar edit-thing--buffer-changed nil)
 (make-variable-buffer-local 'edit-thing--buffer-changed)
@@ -37,9 +37,10 @@
 
 
 (defun edit-thing-edit-region (&optional edit-mode)
+  (interactive)
   (unless edit-mode
     (setq edit-mode major-mode))
-  
+
   (let* ((overlay (make-overlay (region-beginning) (region-end)))
          (buffer (edit-thing--temp-buffer overlay edit-mode)))
 
@@ -55,7 +56,7 @@
         edit-thing--source-overlay overlay
         edit-thing--buffer-changed nil)
 
-  (edit-thing--delete-prefix 
+  (edit-thing--delete-prefix
    edit-thing--buffer-prefix (point-min) (point-max))
 
   ;; global hooks
@@ -63,8 +64,7 @@
   (add-hook 'after-change-functions 'edit-thing--buffer-changed)
 
   ;; buffer local hooks
-  (add-hook 'kill-buffer-hook 'edit-thing--kill-buffer-hook nil t)
-  (edit-thing--install-change-hook))
+  (add-hook 'kill-buffer-hook 'edit-thing--kill-buffer-hook nil t))
 
 
 (defun edit-thing--temp-buffer (overlay mode)
@@ -73,6 +73,7 @@
       (edit-thing--install overlay)
       (when mode (funcall mode)))
     buffer))
+
 
 (defun edit-thing--prefix-intersect (str1 str2)
   (if (and str1 str2)
@@ -90,19 +91,31 @@
     (loop
      with prefix = nil
      while (re-search-forward "^\\s *" end t nil)
+     if (not (eolp))
      do (setq prefix (edit-thing--prefix-intersect prefix (match-string-no-properties 0)))
      if (>= (point) end) return prefix
      else do (forward-char))))
 
 
 (defun edit-thing--delete-prefix (prefix begin end)
-  ;; TODO
-  )
+  (let ((prefix-re (concat "^" (regexp-quote prefix))))
+    (save-excursion
+      (goto-char begin)
+      (loop
+       while (re-search-forward prefix-re end t nil)
+       do (replace-match "")
+       if (>= (point) end) return t
+       else do (forward-char)))))
 
 
 (defun edit-thing--insert-prefix (prefix begin end)
-  ;; TODO
-  )
+  (save-excursion
+    (goto-char begin)
+    (loop
+     while (re-search-forward "^" end t nil)
+     do (insert prefix)
+     if (>= (point) end) return t
+     else do (forward-char))))
 
 
 (defun edit-thing--sync-buffer (buffer)
