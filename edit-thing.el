@@ -41,12 +41,14 @@
   (unless edit-mode
     (setq edit-mode major-mode))
 
-  (let* ((overlay (make-overlay (region-beginning) (region-end)))
-         (buffer (edit-thing--temp-buffer overlay edit-mode)))
+  (edit-thing-edit-overlay
+   (make-overlay (region-beginning) (region-end))
+   edit-mode))
 
+(defun edit-thing-edit-overlay (overlay edit-mode)
+  (let ((buffer (edit-thing--temp-buffer overlay edit-mode)))
     (popwin:popup-buffer buffer)
     (edit-thing--track-buffer buffer)))
-
 
 (defun edit-thing--install (overlay)
   (insert (edit-thing--overlay-body overlay))
@@ -91,10 +93,12 @@
     (loop
      with prefix = nil
      while (re-search-forward "^\\s *" end t nil)
-     if (not (eolp))
-     do (setq prefix (edit-thing--prefix-intersect prefix (match-string-no-properties 0)))
+     if (not (eolp)) do
+       (setq prefix (edit-thing--prefix-intersect
+                     prefix (match-string-no-properties 0)))
      if (>= (point) end) return prefix
-     else do (forward-char))))
+     else do (forward-char)
+     finally return prefix)))
 
 
 (defun edit-thing--delete-prefix (prefix begin end)
